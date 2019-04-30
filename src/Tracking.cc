@@ -175,13 +175,12 @@ Tracking::Tracking(
     // 如果默认阈值提取不出足够fast特征点，则使用最小阈值 8
     int fMinThFAST = fSettings["ORBextractor.minThFAST"];
 
-    // tracking过程都会用到mpORBextractorLeft作为特征点提取器
-    mpORBextractorLeft = new ORBextractor(
-        nFeatures,      //参数的含义还是看上面的注释吧
-        fScaleFactor,
-        nLevels,
-        fIniThFAST,
-        fMinThFAST);
+    // tracking过程都会用到 mpORBextractorLeft 作为特征点提取器
+    mpORBextractorLeft = new ORBextractor(  nFeatures,      //参数的含义还是看上面的注释吧
+                                            fScaleFactor,
+                                            nLevels,
+                                            fIniThFAST,
+                                            fMinThFAST);
 
     // 如果是双目，tracking过程中还会用用到mpORBextractorRight作为右目特征点提取器
     if(sensor==System::STEREO)
@@ -262,7 +261,7 @@ cv::Mat Tracking::GrabImageStereo(
             cvtColor(imGrayRight,imGrayRight,CV_BGR2GRAY);
         }
     }
-    //NOTE 这里考虑得十分周全,甚至脸四通道的图像都考虑到了
+    //NOTE 这里考虑得十分周全,甚至连四通道的图像都考虑到了
     else if(mImGray.channels()==4)
     {
         if(mbRGB)
@@ -385,37 +384,33 @@ cv::Mat Tracking::GrabImageMonocular(
 
     // step 2 ：构造Frame
     if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET)// 没有成功初始化的前一个状态就是NO_IMAGES_YET
-        mCurrentFrame = Frame(
-            mImGray,
-            timestamp,
-            mpIniORBextractor,      //LNOTICE 这个使用的是初始化的时候的ORB特征点提取器
-            mpORBVocabulary,
-            mK,
-            mDistCoef,
-            mbf,
-            mThDepth);
+        mCurrentFrame = Frame(  mImGray,
+                                timestamp,
+                                mpIniORBextractor,      //LNOTICE 这个使用的是初始化的时候的ORB特征点提取器
+                                mpORBVocabulary,
+                                mK,
+                                mDistCoef,
+                                mbf,
+                                mThDepth);
     else
-        mCurrentFrame = Frame(
-            mImGray,
-            timestamp,
-            mpORBextractorLeft,     //NOTICE 当程序正常运行的时候使用的是正常的ORB特征点提取器
-            mpORBVocabulary,
-            mK,
-            mDistCoef,
-            mbf,
-            mThDepth);
+        mCurrentFrame = Frame(  mImGray,
+                                timestamp,
+                                mpORBextractorLeft,     //NOTICE 当程序正常运行的时候使用的是正常的ORB特征点提取器
+                                mpORBVocabulary,
+                                mK,
+                                mDistCoef,
+                                mbf,
+                                mThDepth);
 
     // step 3 ：跟踪
     Track();
+
     //返回当前帧的位姿
     return mCurrentFrame.mTcw.clone();
 }
 
-/*
- * @brief Main tracking function. It is independent of the input sensor.
- *
- * Tracking 线程
- */
+// BRIEF 跟踪线程主要实现函数.
+// Main tracking function. It is independent of the input sensor.
 void Tracking::Track()
 {
     // NOTICE 敲黑板: track包含两部分：估计运动、跟踪局部地图
@@ -429,21 +424,20 @@ void Tracking::Track()
     }
 
     // mLastProcessedState 存储了Tracking最新的状态，用于FrameDrawer中的绘制
-    mLastProcessedState=mState;
+    mLastProcessedState = mState;
 
     // Get Map Mutex -> Map cannot be changed
-    //其实也就只有在这里才上了一次锁
-    //? 疑问:这样子不是在大部分的时间中阻止了对地图的更新吗?
+    // 其实也就只有在这里才上了一次锁
     unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
-    // step 1：初始化
+    // STEP 1：初始化
     if(mState==NOT_INITIALIZED)
     {
         if(mSensor==System::STEREO || mSensor==System::RGBD)
-            //双目初始化(RGBD相机也当做为双目相机来看待)
+            // NOTE 双目初始化(RGBD相机也当做为双目相机来看待)
             StereoInitialization();
         else
-            //单目初始化
+            // NOTE 单目初始化
             MonocularInitialization();
 
         //这一帧处理完成了,调用帧绘制器来赋值一份当前帧的状态
@@ -453,10 +447,11 @@ void Tracking::Track()
         if(mState!=OK)
             return;
     }
-    else// step 2：跟踪
+
+    // step 2：跟踪
+    else
     {
         // System is initialized. Track Frame.
-
         // bOK为临时变量，用于表示每个函数是否执行成功
         bool bOK;
 
@@ -468,7 +463,7 @@ void Tracking::Track()
             // Local Mapping is activated. This is the normal behaviour, unless
             // you explicitly activate the "only tracking" mode.
 
-            //SLAM模式
+            // SLAM 模式
 
             // 正常初始化成功
             if(mState==OK)
@@ -476,8 +471,8 @@ void Tracking::Track()
                 // Local Mapping might have changed some MapPoints tracked in last frame
                 // 检查并更新上一帧被替换的MapPoints
                 // 更新Fuse函数和SearchAndFuse函数替换的MapPoints
-                //由于追踪线程需要使用上一帧的信息,而局部建图线程则可能会对原有的地图点进行替换.在这里进行检查
-                //? 但是检查得到的结果是什么呢?
+                // 由于追踪线程需要使用上一帧的信息,而局部建图线程则可能会对原有的地图点进行替换.在这里进行检查
+                // ? 但是检查得到的结果是什么呢?
                 CheckReplacedInLastFrame();
 
                 // step 2.1：跟踪上一帧或者参考帧或者重定位
@@ -486,7 +481,7 @@ void Tracking::Track()
                 // mCurrentFrame.mnId < mnLastRelocFrameId + 2 这个判断不应该有
                 // 应该只要 mVelocity 不为空，就优先选择 TrackWithMotionModel
                 // mnLastRelocFrameId 上一次重定位的那一帧
-                if(mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
+                if(mVelocity.empty() || mCurrentFrame.mnId < mnLastRelocFrameId+2)
                 {
                     //对于上述两个条件我的理解:
                     //第一个条件,如果运动模型为空,那么就意味着之前已经..跟丢了
@@ -507,20 +502,20 @@ void Tracking::Track()
                     if(!bOK)
                         // TrackReferenceKeyFrame是跟踪参考帧，不能根据固定运动速度模型预测当前帧的位姿态，通过bow加速匹配（SearchByBow）
                         // 最后通过优化得到优化后的位姿
-                        //说白了就是根据恒速模型失败了.只能这样根据参考关键帧来了
+                        // 说白了就是根据恒速模型失败了.只能这样根据参考关键帧来了
                         bOK = TrackReferenceKeyFrame();
                 }
             }
             else
             {
-                //如果正常的初始化不成功,那么就只能重定位了
+                // 如果正常的初始化不成功,那么就只能重定位了
                 // BOW搜索，PnP求解位姿
                 bOK = Relocalization();
             }
         }
-        else        //如果现在处于定位模式
+        // 如果现在处于定位模式.
+        else        
         {
-            
             // Localization Mode: Local Mapping is deactivated
             // 只进行跟踪tracking，局部地图不工作
  
@@ -531,7 +526,8 @@ void Tracking::Track()
             {
                 bOK = Relocalization();
             }
-            else    //如果没有跟丢
+            //如果没有跟丢.
+            else    
             {
                 // mbVO是mbOnlyTracking为true时的才有的一个变量
                 // mbVO为false表示此帧匹配了很多的MapPoints，跟踪很正常，
@@ -540,7 +536,6 @@ void Tracking::Track()
                 {
                     // In last frame we tracked enough MapPoints in the map
                     // mbVO为0则表明此帧匹配了很多的3D map点，非常好
-
                     if(!mVelocity.empty())
                     {
                         bOK = TrackWithMotionModel();
@@ -658,7 +653,7 @@ void Tracking::Track()
         else
             mState=LOST;
 
-        // Update drawer 中的帧副本的信息
+        // NOTE Update drawer 中的帧副本的信息，更新帧绘制器.
         mpFrameDrawer->Update(this);
 
         // If tracking were good, check if we insert a keyframe
@@ -679,7 +674,7 @@ void Tracking::Track()
                 //否则生成空矩阵
                 mVelocity = cv::Mat();
 
-            //相当于更新了地图绘制器
+            // NOTE 相当于更新了地图绘制器
             mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
 
             // Clean VO matches
@@ -751,7 +746,7 @@ void Tracking::Track()
 
         // 保存上一帧的数据,当前帧变上一帧
         mLastFrame = Frame(mCurrentFrame);
-    }
+    }// 正常跟踪.
 
     // Store frame pose information to retrieve the complete camera trajectory afterwards.
     // step 3：记录位姿信息，用于轨迹复现
@@ -776,13 +771,10 @@ void Tracking::Track()
         mlbLost.push_back(mState==LOST);
     }
 
-}// Tracking 
+} // 跟踪线程主要实现函数 Tracking::Track()
 
-/*
- * @brief 双目和rgbd的地图初始化
- *
- * 由于具有深度信息，直接生成MapPoints
- */
+// BRIEF 双目和rgbd的地图初始化
+// 由于具有深度信息，直接生成MapPoints
 void Tracking::StereoInitialization()
 {
     //整个函数只有在当前帧的特征点超过500的时候才会进行
@@ -798,8 +790,7 @@ void Tracking::StereoInitialization()
         // KeyFrame包含Frame、地图3D点、以及BoW
         // KeyFrame里有一个mpMap，Tracking里有一个mpMap，而KeyFrame里的mpMap都指向Tracking里的这个mpMap
         // KeyFrame里有一个mpKeyFrameDB，Tracking里有一个mpKeyFrameDB，而KeyFrame里的mpMap都指向Tracking里的这个mpKeyFrameDB
-        //? 提问: 为什么要指向Tracking中的相应的变量呢?
-        KeyFrame* pKFini = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+        KeyFrame* pKFini = new KeyFrame(mCurrentFrame, mpMap, mpKeyFrameDB);
 
         // Insert KeyFrame in the map
         // KeyFrame中包含了地图、反过来地图中也包含了KeyFrame，相互包含
@@ -810,9 +801,9 @@ void Tracking::StereoInitialization()
         // step 4：为每个特征点构造MapPoint
         for(int i=0; i<mCurrentFrame.N;i++)
         {
-            //只有具有正深度的点才会被构造地图点
+            // 只有具有正深度的点才会被构造地图点
             float z = mCurrentFrame.mvDepth[i];
-            if(z>0)
+            if(z > 0)
             {
                 // step 4.1：通过反投影得到该特征点的3D坐标
                 cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
@@ -848,74 +839,80 @@ void Tracking::StereoInitialization()
         // step 4：在局部地图中添加该初始关键帧
         mpLocalMapper->InsertKeyFrame(pKFini);
 
-        //当前帧变上一帧
+        // STEP 更新状态量.
+        // 当前帧变上一帧（变为上一个普通帧和关键帧）.
         mLastFrame = Frame(mCurrentFrame);
-        mnLastKeyFrameId=mCurrentFrame.mnId;
+        mnLastKeyFrameId = mCurrentFrame.mnId;
         mpLastKeyFrame = pKFini;
 
-
+        // 添加到局部地图帧集合.
         mvpLocalKeyFrames.push_back(pKFini);
-        //? 这个局部地图点竟然..不在mpLocalMapper中管理?
-        mvpLocalMapPoints=mpMap->GetAllMapPoints();
+
+        // 局部地图中添加所有特征点.
+        mvpLocalMapPoints = mpMap->GetAllMapPoints();
+
+        // 更新参考帧.
         mpReferenceKF = pKFini;
         mCurrentFrame.mpReferenceKF = pKFini;
 
-        // 把当前（最新的）局部MapPoints作为ReferenceMapPoints
-        // ReferenceMapPoints是DrawMapPoints函数画图的时候用的
+        // 把当前（最新的）局部 MapPoints 作为地图参考地图点 ReferenceMapPoints
+        // ReferenceMapPoints 是 DrawMapPoints 函数画图的时候用的
         mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
-        //? 设置原点?
+        // 地图关键帧
         mpMap->mvpKeyFrameOrigins.push_back(pKFini);
 
+        // NOTE 更新可视化线程地图绘制器.
         mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
 
-        //追踪成功
-        mState=OK;
+        // 更新追踪状态.
+        mState = OK;
     }
-}
+} // 双目初始化 StereoInitialization()
 
+// BRIEF 单目初始化
 /*
- * @brief 单目的地图初始化
- *
  * 并行地计算基础矩阵和单应性矩阵，选取其中一个模型，恢复出最开始两帧之间的相对姿态以及点云
  * 得到初始两帧的匹配、相对运动、初始MapPoints
  */
 void Tracking::MonocularInitialization()
 {
-    // 如果单目初始器还没有被创建，则创建单目初始器 NOTICE 也只有单目会使用到这个
+    // 如果单目初始器还没有被创建，则创建单目初始器 NOTE 也只有单目会使用到这个
     if(!mpInitializer)
     {
         // Set Reference Frame
-        // 单目初始帧的特征点数必须大于100
-        if(mCurrentFrame.mvKeys.size()>100)
+        // 单目初始帧的特征点数必须大于 100
+        if(mCurrentFrame.mvKeys.size()>100)     // TODO 这里为什么要用未经过畸变矫正的特征点呢？
         {
-            // step 1：得到用于初始化的第一帧，初始化需要两帧
+            // STEP 1：得到用于初始化的第一帧，初始化需要两帧
             mInitialFrame = Frame(mCurrentFrame);
             // 记录最近的一帧
             mLastFrame = Frame(mCurrentFrame);
-            // mvbPrevMatched最大的情况就是所有特征点都被跟踪上
-            //因为当前帧会变成"上一帧"",所以存储到了这个变量中
+
+            // mvbPrevMatched最大的情况就是当前帧的所有特征点都被跟踪上
+            // 因为当前帧会变成"上一帧"",所以存储到了这个变量中
             mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
-            for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
-                mvbPrevMatched[i]=mCurrentFrame.mvKeysUn[i].pt;
+            for(size_t i = 0; i < mCurrentFrame.mvKeysUn.size(); i++)
+                mvbPrevMatched[i] = mCurrentFrame.mvKeysUn[i].pt;
 
             // 这两句是多余的
             if(mpInitializer)
                 delete mpInitializer;
 
-            // 由当前帧构造初始器 sigma:1.0 iterations:200
-            mpInitializer =  new Initializer(mCurrentFrame,1.0,200);
-
+            // NOTE 由当前帧构造初始器
+            mpInitializer =  new Initializer(mCurrentFrame, 1.0, 200);
+            // mvIniMatches 先填充为 -1 ，也就是均没有匹配.
             fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
 
             return;
         }
     }
-    else    //如果单目初始化器已经被创建
+    // 如果单目初始化器已经被创建.
+    else    
     {
         // Try to initialize
         // step 2：如果当前帧特征点数大于100，则得到用于单目初始化的第二帧
         // 如果当前帧特征点太少，重新构造初始器
-        // NOTICE 因此只有连续两帧的特征点个数都大于100时，才能继续进行初始化过程
+        // NOTE 因此只有连续两帧的特征点个数都大于100时，才能继续进行初始化过程
         if((int)mCurrentFrame.mvKeys.size()<=100)
         {
             delete mpInitializer;
@@ -925,18 +922,16 @@ void Tracking::MonocularInitialization()
         }
 
         // Find correspondences
-        // step 3：在mInitialFrame与mCurrentFrame中找匹配的特征点对
+        // step 3：在 mInitialFrame 与 mCurrentFrame 中找匹配的特征点对
         // mvbPrevMatched为前一帧的特征点，存储了mInitialFrame中哪些点将进行接下来的匹配
-        // mvIniMatches存储mInitialFrame,mCurrentFrame之间匹配的特征点
-        ORBmatcher matcher(
-            0.9,        //最佳的和次佳评分的比值阈值
-            true);      //检查特征点的方向
-        //针对单目初始化的时候,进行特征点的匹配
-        int nmatches = matcher.SearchForInitialization(
-            mInitialFrame,mCurrentFrame,    //初始化时的参考帧和当前帧
-            mvbPrevMatched,                 //在初始化参考帧中提取得到的特征点
-            mvIniMatches,                   //保存匹配关系
-            100);                           //搜索窗口大小
+        // mvIniMatches 存储mInitialFrame,mCurrentFrame之间匹配的标志.
+        ORBmatcher matcher( 0.9,        //? 最佳的和次佳评分的比值? 默认为 0.6 
+                            true);      //检查特征点的方向
+        // 针对单目初始化的时候,进行特征点的匹配
+        int nmatches = matcher.SearchForInitialization( mInitialFrame,mCurrentFrame, //初始化时的参考帧和当前帧
+                                                        mvbPrevMatched,              //在初始化参考帧中提取得到的特征点
+                                                        mvIniMatches,                //保存匹配关系
+                                                        100);                        //? 什么窗口大小
 
         // Check if there are enough correspondences
         // step 4：如果初始化的两帧之间的匹配点太少，重新初始化
@@ -959,9 +954,9 @@ void Tracking::MonocularInitialization()
             mvIniP3D,           //进行三角化得到的空间点集合
             vbTriangulated))    //以及对应于mvIniMatches来讲,其中哪些点被三角化了
         {
-            //当初始化成功的时候
+            // 当初始化成功的时候
             // step 6：删除那些无法进行三角化的匹配点
-            for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
+            for(size_t i=0, iend = mvIniMatches.size(); i<iend;i++)
             {
                 if(mvIniMatches[i]>=0 && !vbTriangulated[i])
                 {
@@ -971,6 +966,7 @@ void Tracking::MonocularInitialization()
             }
 
             // Set Frame Poses
+            // STEP 7. 设置前两帧的位姿.
             // 将初始化的第一帧作为世界坐标系，因此第一帧变换矩阵为单位矩阵
             mInitialFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
             // 由Rcw和tcw构造Tcw,并赋值给mTcw，mTcw为世界坐标系到该帧的变换矩阵
@@ -979,28 +975,28 @@ void Tracking::MonocularInitialization()
             tcw.copyTo(Tcw.rowRange(0,3).col(3));
             mCurrentFrame.SetPose(Tcw);
 
-            // step 6：将三角化得到的3D点包装成MapPoints
+            // step 8：将三角化得到的3D点包装成MapPoints
             // Initialize函数会得到mvIniP3D，
             // mvIniP3D是cv::Point3f类型的一个容器，是个存放3D点的临时变量，
-            // CreateInitialMapMonocular将3D点包装成MapPoint类型存入KeyFrame和Map中
+            // CreateInitialMapMonocular 将3D点包装成 MapPoint 类型存入 KeyFrame 和 Map 中
             CreateInitialMapMonocular();
         }//当初始化成功的时候进行
     }//如果单目初始化器已经被创建
-}
+} // 单目初始化 Tracking::MonocularInitialization()
 
 /*
  * @brief CreateInitialMapMonocular
  *
  * 为单目摄像头三角化得到的点生成MapPoints
  */
-//使用在单目初始化过程中三角化得到的点,包装成为地图点,并且生成初始地图
+// BRIEF 使用在单目初始化过程中三角化得到的点,包装成为地图点,并且生成初始地图
 void Tracking::CreateInitialMapMonocular()
 {
-    // Create KeyFrames 认为单目初始化时候的参考帧和当前帧都是关键帧
+    // STEP 1. Create KeyFrames 认为单目初始化时候的参考帧和当前帧都是关键帧
     KeyFrame* pKFini = new KeyFrame(mInitialFrame,mpMap,mpKeyFrameDB);
     KeyFrame* pKFcur = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
 
-    // step 1：将初始关键帧的描述子转为BoW
+    // step 2：将初始关键帧的描述子转为BoW
     pKFini->ComputeBoW();
     // step 2：将当前关键帧的描述子转为BoW
     pKFcur->ComputeBoW();
@@ -1023,10 +1019,9 @@ void Tracking::CreateInitialMapMonocular()
         cv::Mat worldPos(mvIniP3D[i]);
 
         // step 4.1：用3D点构造MapPoint
-        MapPoint* pMP = new MapPoint(
-            worldPos,
-            pKFcur,     //? 值得寻味:为什么不是 pKFini ? 这里的关键帧的设置有什么说法吗? 
-            mpMap);
+        MapPoint* pMP = new MapPoint(worldPos,  // 3D 点的世界坐标.
+                                     pKFcur,    // 对应的关键帧.
+                                     mpMap);    // 地图.
 
         // step 4.2：为该MapPoint添加属性：
         // a.观测到该MapPoint的关键帧
@@ -1034,7 +1029,7 @@ void Tracking::CreateInitialMapMonocular()
         // c.该MapPoint的平均观测方向和深度范围
 
         // step 4.3：表示该KeyFrame的哪个特征点可以观测到哪个3D点
-        pKFini->AddMapPoint(pMP,i);
+        pKFini->AddMapPoint(pMP,i);                 // 第一个参数是地图点，第二个参数是地图点在关键帧中的索引.
         pKFcur->AddMapPoint(pMP,mvIniMatches[i]);
 
         // a.表示该MapPoint可以被哪个KeyFrame的哪个特征点观测到
@@ -1084,7 +1079,7 @@ void Tracking::CreateInitialMapMonocular()
         return;
     }
 
-    //将两帧之间的变换归一化到平均深度1的尺度下
+    // 将两帧之间的变换归一化到平均深度1的尺度下
     // Scale initial baseline
     cv::Mat Tc2w = pKFcur->GetPose();
     // x/z y/z 将z归一化到1 
@@ -1123,29 +1118,30 @@ void Tracking::CreateInitialMapMonocular()
 
     mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
 
+    // NOTE 更新地图绘制器.
     mpMapDrawer->SetCurrentCameraPose(pKFcur->GetPose());
 
     mpMap->mvpKeyFrameOrigins.push_back(pKFini);
 
     mState=OK;// 初始化成功，至此，初始化过程完成
-}
+} // 创建初始地图.
 
 /*
- * @brief 检查上一帧中的MapPoints是否被替换
+ * BRIEF 检查上一帧中的MapPoints是否被替换
  * 
- * Local Mapping线程可能会将关键帧中某些MapPoints进行替换，由于tracking中需要用到mLastFrame，这里检查并更新上一帧中被替换的MapPoints
+ * Local Mapping 线程可能会将关键帧中某些MapPoints进行替换，由于tracking中需要用到mLastFrame，这里检查并更新上一帧中被替换的MapPoints
  * @see LocalMapping::SearchInNeighbors()
  */
 //? 目测会发生替换,是因为合并三角化之后特别近的点吗? 
 void Tracking::CheckReplacedInLastFrame()
 {
-    for(int i =0; i<mLastFrame.N; i++)
+    for(int i = 0; i < mLastFrame.N; i++)
     {
         MapPoint* pMP = mLastFrame.mvpMapPoints[i];
         //如果这个地图点存在
         if(pMP)
         {
-            //获取其是否被替换,以及替换后的点
+            // 获取其是否被替换,以及替换后的点
             MapPoint* pRep = pMP->GetReplaced();
             if(pRep)
             {   
@@ -1156,9 +1152,8 @@ void Tracking::CheckReplacedInLastFrame()
     }
 }
 
+// BRIEF 对参考关键帧的MapPoints进行跟踪
 /*
- * @brief 对参考关键帧的MapPoints进行跟踪
- * 
  * 1. 计算当前帧的词包，将当前帧的特征点分到特定层的nodes上
  * 2. 对属于同一node的描述子进行匹配
  * 3. 根据匹配对估计当前帧的姿态
@@ -1197,33 +1192,30 @@ bool Tracking::TrackReferenceKeyFrame()
 
     // Discard outliers
     // step 5：剔除优化后的outlier匹配点（MapPoints）
-    //之所以在优化之后才剔除外点，是因为在优化的过程中就有了对这些外点的标记
+    // 之所以在优化之后才剔除外点，是因为在优化的过程中就有了对这些外点的标记
     int nmatchesMap = 0;
     for(int i =0; i<mCurrentFrame.N; i++)
     {
         if(mCurrentFrame.mvpMapPoints[i])
         {
-            //如果对应到的某个特征点是外点
+            // 如果对应到的某个特征点是外点
             if(mCurrentFrame.mvbOutlier[i])
             {
                 //清除它在当前帧中存在过的痕迹
                 MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
-
                 mCurrentFrame.mvpMapPoints[i]=static_cast<MapPoint*>(NULL);
                 mCurrentFrame.mvbOutlier[i]=false;
                 pMP->mbTrackInView = false;
                 pMP->mnLastFrameSeen = mCurrentFrame.mnId;
-                //其实这里--也没有什么用了,因为后面也用不到它了
                 nmatches--;
             }
             else if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
-                //匹配的内点计数++
-                nmatchesMap++;
+                nmatchesMap++;  // 匹配的内点计数++
         }
     }
 
     return nmatchesMap>=10;
-}
+} // 跟踪参考关键帧模型.
 
 /**
  * @brief 双目或rgbd摄像头根据深度值为上一帧产生新的MapPoints
@@ -2012,7 +2004,7 @@ void Tracking::UpdateLocalKeyFrames()
     }
 }
 
-//重定位过程
+// BRIEF 重定位过程
 bool Tracking::Relocalization()
 {
     // Compute Bag of Words Vector
@@ -2221,7 +2213,7 @@ bool Tracking::Relocalization()
         mnLastRelocFrameId = mCurrentFrame.mnId;
         return true;
     }
-}//重定位
+} //重定位
 
 //整个追踪线程执行复位操作
 void Tracking::Reset()

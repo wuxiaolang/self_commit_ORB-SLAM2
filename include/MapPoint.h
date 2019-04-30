@@ -155,8 +155,7 @@ public:
     bool isBad();
 
     /**
-     * @brief 在形成闭环的时候，会更新 KeyFrame 与 MapPoint 之间的关系
-     * 其实也就是相互替换? 
+     * @brief 使用某个地图点来替换掉当前地图点的数据
      * 
      * @param[in] pMP 地图点
      */
@@ -238,11 +237,12 @@ public:
     int nObs;
 
     // Variables used by the tracking
-    float mTrackProjX;             ///< 当前地图点投影到某帧上后的坐标
-    float mTrackProjY;             ///< 当前地图点投影到某帧上后的坐标
-    float mTrackProjXR;            ///< 当前地图点投影到某帧上后的坐标(右目)
-    int mnTrackScaleLevel;         ///< 所处的尺度, 由其他的类进行操作 //?
-    float mTrackViewCos;           ///< 被追踪到时,那帧相机看到当前地图点的视角
+    //? 
+    float mTrackProjX;             ///<通过投影的方式追踪得到的/.?????
+    float mTrackProjY;             ///<y
+    float mTrackProjXR;            ///<在右目图像中的坐标x
+    int mnTrackScaleLevel;         ///<所处的尺度?
+    float mTrackViewCos;           ///<视角
     // TrackLocalMap - SearchByProjection 中决定是否对该点进行投影的变量
     // NOTICE mbTrackInView==false的点有几种：
     // a 已经和当前帧经过匹配（TrackReferenceKeyFrame，TrackWithMotionModel）但在优化过程中认为是外点

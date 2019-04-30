@@ -33,7 +33,7 @@ namespace ORB_SLAM2
 {
 
 /**
- * @brief 提取器节点
+ * BRIEF 提取器节点
  * @details 用于在特征点的分配过程中。
  * 
  */

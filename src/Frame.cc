@@ -147,7 +147,7 @@ Frame::Frame(const cv::Mat &imLeft, 			//左目图像
     mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
 	//同样获取每层图像缩放因子的倒数
     mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
-	//高斯模糊的时候，使用的方差
+	//TODO 不知道获取的这个sigma以及sigma^2有什么实际含义。并且在Frame.cpp这里是没有用到。
     mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
 	//获取sigma^2的倒数
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
@@ -347,7 +347,7 @@ Frame::Frame(const cv::Mat &imGray, 	//灰度化之后的彩色图像
     AssignFeaturesToGrid();
 }
 
-// 单目初始化
+// BRIEF 构造单目帧.
 Frame::Frame(const cv::Mat &imGray, 			//灰度化后的彩色图像
 			 const double &timeStamp, 			//时间戳
 			 ORBextractor* extractor,			//ORB特征点提取器的句柄
@@ -389,7 +389,7 @@ Frame::Frame(const cv::Mat &imGray, 			//灰度化后的彩色图像
 	//计算sigma^2的倒数
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
-    // ORB extraction
+    // STEP ORB extraction
 	/** 3. 对这个单目图像进行提取特征点操作 \n Frame::ExtractORB() */
     ExtractORB(0,imGray);
 
@@ -403,7 +403,7 @@ Frame::Frame(const cv::Mat &imGray, 			//灰度化后的彩色图像
         return;
 
     /** 5. 对提取到的特征点进行矫正 \n Frame::UndistortKeyPoints() */
-    // 调用OpenCV的矫正函数矫正orb提取的特征点
+    // 调用OpenCV的矫正函数【矫正】orb提取的特征点
     UndistortKeyPoints();
 
     // Set no stereo information
@@ -413,9 +413,9 @@ Frame::Frame(const cv::Mat &imGray, 			//灰度化后的彩色图像
 
 
     /** 7. 初始化本帧的地图点 */
-	//初始化存储地图点句柄的vector
+	// 初始化存储地图点句柄的vector
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
-	//开始认为默认的地图点均为inlier
+	// 开始认为默认的地图点均为inlier
     mvbOutlier = vector<bool>(N,false);
 
     // This is done only for the first Frame (or after a change in the calibration)
@@ -455,9 +455,9 @@ Frame::Frame(const cv::Mat &imGray, 			//灰度化后的彩色图像
 
 	/** 10. 将特征点分配到图像网格中 \n Frame::AssignFeaturesToGrid() */
     AssignFeaturesToGrid();
-}
+} // 构造单目帧.
 
-//将提取的ORB特征点分配到图像网格中
+// BRIEF 将提取的ORB特征点分配到图像网格中
 void Frame::AssignFeaturesToGrid()
 {
     /** 步骤: */
@@ -490,7 +490,7 @@ void Frame::AssignFeaturesToGrid()
     }/** 5. 特征点遍历结束 */
 }
 
-//提取图像的ORB特征
+// BRIEF 提取图像的ORB特征
 void Frame::ExtractORB(int flag, 			//0-左图  1-右图
 					   const cv::Mat &im)	//等待提取特征点的图像
 {
@@ -514,7 +514,7 @@ void Frame::ExtractORB(int flag, 			//0-左图  1-右图
     //这个好像的确是有的, 右图的特征点提取貌似是要在左图的基础上进行,来加速特征点的提取过程
 }
 
-// 设置相机姿态，随后会调用 UpdatePoseMatrices() 来改变mRcw,mRwc等变量的值
+// BRIEF 设置相机姿态，随后会调用 UpdatePoseMatrices() 来改变mRcw,mRwc等变量的值
 void Frame::SetPose(cv::Mat Tcw)
 {
 	/** 1. 更改类的成员变量,深拷贝 */
@@ -737,7 +737,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
     /** </ul> */
 }
 
-//找到在 以x,y为中心,半径为r的圆形内且在[minLevel, maxLevel]的特征点
+//找到在 以x,y为中心,边长为2r的方形内且在[minLevel, maxLevel]的特征点
 vector<size_t> Frame::GetFeaturesInArea(const float &x, const float  &y, const float  &r, const int minLevel, const int maxLevel) const
 {
     /** 步骤： <ul> */
@@ -850,7 +850,7 @@ vector<size_t> Frame::GetFeaturesInArea(const float &x, const float  &y, const f
 }
 
 
-//计算指定特征点属于哪个图像网格
+// BRIEF 计算指定特征点属于哪个图像网格
 bool Frame::PosInGrid(			//返回值：true-说明找到了指定特征点所在的图像网格  false-说明没有找到
 	const cv::KeyPoint &kp,		//输入，指定的特征点
 	int &posX,int &posY)		//输出，指定的图像特征点所在的图像网格的横纵id（其实就是图像网格的坐标）
@@ -876,26 +876,25 @@ bool Frame::PosInGrid(			//返回值：true-说明找到了指定特征点所在
     return true;
 }
 
-//计算词包 mBowVec 和 mFeatVec
+// BRIEF 计算当前帧的词袋向量.
+// 计算词包 mBowVec 和 mFeatVec
 void Frame::ComputeBoW()
 {
-	
     /** 这个函数只有在当前帧的词袋是空的时候才回进行操作。步骤如下:<ul> */
     if(mBowVec.empty())
     {
-		/** <li> 1.要写入词袋信息,将以OpenCV格式存储的描述子 Frame::mDescriptors 转换成为vector<cv::Mat>存储</li> */
+		/** STEP  1.要写入词袋信息,将以OpenCV格式存储的描述子 Frame::mDescriptors 转换成为vector<cv::Mat>存储</li> */
         vector<cv::Mat> vCurrentDesc = Converter::toDescriptorVector(mDescriptors);
-		/** <li> 2. 将特征点的描述子转换成为当前帧的词袋 </li> */
+		/** STEP  2. 将特征点的描述子转换成为当前帧的词袋 </li> */
         mpORBvocabulary->transform(vCurrentDesc,	//当前的描述子vector
 								   mBowVec,			//输出，词袋向量
 								   mFeatVec,		//输出，保存有特征点索引的特征 vector
 								   4);				//获取某一层的节点索引
 		//@todo 为什么这里要指定“获取某一层的节点索引”？
     }//判断当前帧的词袋是否是空的
-    /** </ul> */
 }
 
-//对特征点去畸变
+// BRIEF 对特征点去畸变
 void Frame::UndistortKeyPoints()
 {
     /** 步骤如下：<ul>*/
@@ -932,13 +931,12 @@ void Frame::UndistortKeyPoints()
     /** <li> 3. 为了能够直接调用opencv的函数来去畸变，需要先将刚才的临时矩阵调整为2通道 </li> */
     mat=mat.reshape(2);
     /** <li> 4. 调用 cv::undistortPoints() 函数，结合去畸变参数 Frame::mDistCoef 来对这些点进行去畸变矫正 </li> */
-    cv::undistortPoints(	// 用cv的函数进行失真校正
-		mat,				//输入的特征点坐标
-		mat,				//输出的特征点坐标，也就是校正后的特征点坐标， NOTICE 并且看起来会自动写入到通道二里面啊
-		mK,					//相机的内参数矩阵
-		mDistCoef,			//保存相机畸变参数的变量
-		cv::Mat(),			//一个空的cv::Mat()类型，对应为函数原型中的R。Opencv的文档中说如果是单目相机，这里可以是恐惧真
-		mK); 				//相机的内参数矩阵，对应为函数原型中的P
+    cv::undistortPoints(mat,				//输入的特征点坐标
+                        mat,				//输出的特征点坐标，也就是校正后的特征点坐标， NOTICE 并且看起来会自动写入到通道二里面啊
+                        mK,					//相机的内参数矩阵
+                        mDistCoef,			//保存相机畸变参数的变量
+                        cv::Mat(),			//一个空的cv::Mat()类型，对应为函数原型中的R。Opencv的文档中说如果是单目相机，这里可以是恐惧真
+                        mK); 				//相机的内参数矩阵，对应为函数原型中的P
 	
 	/** <li> 5. 然后调整回只有一个通道，回归我们正常的处理方式 </li> */
     mat=mat.reshape(1);
@@ -961,9 +959,9 @@ void Frame::UndistortKeyPoints()
         mvKeysUn[i]=kp;
     }//遍历每一个特征点
     /** </ul> */
-}
+} // 去畸变 UndistortKeyPoints
 
-//计算去畸变图像的边界
+// BRIEF 计算去畸变图像的边界
 void Frame::ComputeImageBounds(const cv::Mat &imLeft)	//参数是需要计算边界的图像
 {
     

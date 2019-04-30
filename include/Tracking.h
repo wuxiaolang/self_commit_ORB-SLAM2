@@ -182,7 +182,7 @@ public:
     // 初始化时前两帧相关变量
     ///之前的匹配
     std::vector<int> mvIniLastMatches;
-    ///初始化阶段中,当前帧中的特征点和参考帧中的特征点的匹配关系
+    ///初始化阶段中,当前帧中的特征点和参考帧中的特征点的匹配关系，标记匹配状态，未匹配上的标为-1
     std::vector<int> mvIniMatches;// 跟踪初始化时前两帧之间的匹配
     ///在初始化的过程中,保存参考帧中的特征点
     std::vector<cv::Point2f> mvbPrevMatched;

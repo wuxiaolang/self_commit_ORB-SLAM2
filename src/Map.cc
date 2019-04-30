@@ -46,7 +46,7 @@ Map::Map():mnMaxKFid(0)
  * @brief Insert KeyFrame in the map
  * @param pKF KeyFrame
  */
-//在地图中插入关键帧,同时更新关键帧的最大id
+// BRIEF 在地图中插入关键帧,同时更新关键帧的最大id
 void Map::AddKeyFrame(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutexMap);
@@ -70,7 +70,7 @@ void Map::AddMapPoint(MapPoint *pMP)
  * @brief Erase MapPoint from the map
  * @param pMP MapPoint
  */
-//从地图中删除地图点,但是其实这个地图点所占用的内存空间并没有被释放
+//从地图中删除地图点
 void Map::EraseMapPoint(MapPoint *pMP)
 {
     unique_lock<mutex> lock(mMutexMap);

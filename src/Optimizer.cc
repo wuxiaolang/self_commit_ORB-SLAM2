@@ -37,7 +37,7 @@
 namespace ORB_SLAM2
 {
 
-// pMap中所有的MapPoints和关键帧做bundle adjustment优化
+// BRIEF pMap中所有的MapPoints和关键帧做bundle adjustment优化
 // 这个全局BA优化在本程序中有两个地方使用：
 // a.单目初始化：CreateInitialMapMonocular函数
 // b.闭环优化：RunGlobalBundleAdjustment函数
@@ -268,6 +268,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
 }
 
+// BRIEF 为自优化.
 /**
  * @brief Pose Only Optimization
  * 
@@ -510,7 +511,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     pFrame->SetPose(pose);
 
     return nInitialCorrespondences-nBad;
-}
+} // 位姿优化.
 
 /**
  * @brief Local Bundle Adjustment

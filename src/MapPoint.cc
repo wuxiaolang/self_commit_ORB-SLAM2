@@ -55,15 +55,15 @@ MapPoint::MapPoint(const cv::Mat &Pos,  //地图点的世界坐标
     mnBAGlobalForKF(0),                     //? 
     mpRefKF(pRefKF),                        //? 参考关键帧? 是什么意思
     mnVisible(1),                           //在帧中的可视次数
-    mnFound(1),                             //被找到的次数 和上面的相比要求能够匹配上
+    mnFound(1),                             //? 被找到的次数 和上面的有什么不同?
     mbBad(false),                           //坏点标记
-    mpReplaced(static_cast<MapPoint*>(NULL)), //替换掉当前地图点的点
-    mfMinDistance(0),                       //当前地图点在某帧下,可信赖的被找到时其到关键帧光心距离的下界
-    mfMaxDistance(0),                       //上界
-    mpMap(pMap)                             //从属地图
+    mpReplaced(static_cast<MapPoint*>(NULL)), //?
+    mfMinDistance(0),                       //?
+    mfMaxDistance(0),                       //从属地图
+    mpMap(pMap)                             
 {
     Pos.copyTo(mWorldPos);
-    //平均观测方向初始化为0
+    //平均观测方向
     mNormalVector = cv::Mat::zeros(3,1,CV_32F);
 
     // MapPoints can be created from Tracking and Local Mapping. This mutex avoid conflicts with id.
@@ -106,11 +106,10 @@ MapPoint::MapPoint(const cv::Mat &Pos, Map* pMap, Frame* pFrame, const int &idxF
     mfMaxDistance = dist*levelScaleFactor;                              //当前图层的"深度"
     mfMinDistance = mfMaxDistance/pFrame->mvScaleFactors[nLevels-1];    //该特征点上一个图层的"深度""
 
-    // 见 mDescriptor 在MapPoint.h中的注释 ==> 其实就是获取这个地图点的描述子
+    // 见 mDescriptor 在MapPoint.h中的注释
     pFrame->mDescriptors.row(idxF).copyTo(mDescriptor);
 
     // MapPoints can be created from Tracking and Local Mapping. This mutex avoid conflicts with id.
-    // TODO 不太懂,怎么个冲突法? 
     unique_lock<mutex> lock(mpMap->mMutexPointCreation);
     mnId=nNextId++;
 }
@@ -118,7 +117,6 @@ MapPoint::MapPoint(const cv::Mat &Pos, Map* pMap, Frame* pFrame, const int &idxF
 //设置地图点在世界坐标系下的坐标
 void MapPoint::SetWorldPos(const cv::Mat &Pos)
 {
-    //TODO 为什么这里多了个线程锁
     unique_lock<mutex> lock2(mGlobalMutex);
     unique_lock<mutex> lock(mMutexPos);
     Pos.copyTo(mWorldPos);
@@ -145,7 +143,7 @@ KeyFrame* MapPoint::GetReferenceKeyFrame()
 /**
  * @brief 添加观测
  *
- * 记录哪些 KeyFrame 的那个特征点能观测到该 MapPoint \n
+ * 记录哪些KeyFrame的那个特征点能观测到该MapPoint \n
  * 并增加观测的相机数目nObs，单目+1，双目或者grbd+2
  * 这个函数是建立关键帧共视关系的核心函数，能共同观测到某些MapPoints的关键帧是共视关键帧
  * @param pKF KeyFrame
@@ -165,14 +163,13 @@ void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
         nObs++; // 单目
 }
 
-
+//HERE
 // 删除某个关键帧对当前地图点的观测
 void MapPoint::EraseObservation(KeyFrame* pKF)
 {
     bool bBad=false;
     {
         unique_lock<mutex> lock(mMutexFeatures);
-        //查找这个要删除的观测,根据单目和双目类型的不同从其中删除当前地图点的被观测次数
         if(mObservations.count(pKF))
         {
             int idx = mObservations[pKF];
@@ -195,18 +192,15 @@ void MapPoint::EraseObservation(KeyFrame* pKF)
     }
 
     if(bBad)
-        // 告知可以观测到该MapPoint的Frame，该MapPoint已被删除
         SetBadFlag();
 }
 
-//获取对当前点的观测详情(目测是用于优化? TODO)
 map<KeyFrame*, size_t> MapPoint::GetObservations()
 {
     unique_lock<mutex> lock(mMutexFeatures);
     return mObservations;
 }
 
-//只是获取当前地图点的被观测次数
 int MapPoint::Observations()
 {
     unique_lock<mutex> lock(mMutexFeatures);
@@ -240,18 +234,11 @@ MapPoint* MapPoint::GetReplaced()
     return mpReplaced;
 }
 
-// 在形成闭环的时候，会更新 KeyFrame 与 MapPoint 之间的关系
+// BRIEF 在形成闭环的时候，会更新KeyFrame与MapPoint之间的关系
 void MapPoint::Replace(MapPoint* pMP)
 {
-    //自己换自己,也就是不换,就直接跳过了
     if(pMP->mnId==this->mnId)
         return;
-
-    //要替换当前地图点,有两个工作:
-    // 1. 将当前地图点的观测数据等其他数据都"叠加"到新的地图点上
-    // 2. 将观测到当前地图点的关键帧的信息进行更新
-
-    //- 准备工作
 
     int nvisible, nfound;
     map<KeyFrame*,size_t> obs;// 这一段和SetBadFlag函数相同
@@ -259,26 +246,18 @@ void MapPoint::Replace(MapPoint* pMP)
         unique_lock<mutex> lock1(mMutexFeatures);
         unique_lock<mutex> lock2(mMutexPos);
         obs=mObservations;
-        //清除当前地图点的原有观测
         mObservations.clear();
-        //当前的地图点被删除了
         mbBad=true;
-        //暂存当前地图点的可视次数和被找到的次数
         nvisible = mnVisible;
         nfound = mnFound;
-        //指明当前地图点已经被指定的地图点替换了
         mpReplaced = pMP;
     }
 
     // 所有能观测到该MapPoint的keyframe都要替换
-    //- 将观测到当前地图的的关键帧的信息进行更新
     for(map<KeyFrame*,size_t>::iterator mit=obs.begin(), mend=obs.end(); mit!=mend; mit++)
     {
         // Replace measurement in keyframe
         KeyFrame* pKF = mit->first;
-
-        //其中又有两种情况:
-        //- 一种情况是, 这个关键帧中没有对"要替换本地图点的地图点"的观测
 
         if(!pMP->IsInKeyFrame(pKF))
         {
@@ -287,26 +266,19 @@ void MapPoint::Replace(MapPoint* pMP)
         }
         else
         {
-
-            //- 另外一种情况是,这个关键帧对当前的地图点和"要替换本地图点的地图点"都具有观测
-            // 产生冲突，即pKF中有两个特征点a,b（这两个特征点的描述子是近似相同的），这两个特征点对应两个 MapPoint 为this,pMP
+            // 产生冲突，即pKF中有两个特征点a,b（这两个特征点的描述子是近似相同的），这两个特征点对应两个MapPoint为this,pMP
             // 然而在fuse的过程中pMP的观测更多，需要替换this，因此保留b与pMP的联系，去掉a与this的联系
-            //说白了,既然是让对方的那个地图点来代替当前的地图点,就是说明对方更好,所以删除这个关键帧对当前帧的观测
             pKF->EraseMapPointMatch(mit->second);
         }
     }
-
-    //- 将当前地图点的观测数据等其他数据都"叠加"到新的地图点上
     pMP->IncreaseFound(nfound);
     pMP->IncreaseVisible(nvisible);
-    //描述子更新
     pMP->ComputeDistinctiveDescriptors();
 
-    //告知地图,删掉我
     mpMap->EraseMapPoint(this);
 }
 
-// 没有经过 MapPointCulling 检测的MapPoints, 认为是坏掉的点
+// 没有经过MapPointCulling检测的MapPoints, 认为是坏掉的点
 bool MapPoint::isBad()
 {
     unique_lock<mutex> lock(mMutexFeatures);
@@ -322,7 +294,6 @@ bool MapPoint::isBad()
  * 2. 该MapPoint被这些帧观测到，但并不一定能和这些帧的特征点匹配上
  *    例如：有一个MapPoint（记为M），在某一帧F的视野范围内，
  *    但并不表明该点M可以和F这一帧的某个特征点能匹配上
- * TODO  所以说，found 就是表示匹配上了嘛？
  */
 void MapPoint::IncreaseVisible(int n)
 {
@@ -342,7 +313,6 @@ void MapPoint::IncreaseFound(int n)
     mnFound+=n;
 }
 
-// 计算被找到的比例
 float MapPoint::GetFoundRatio()
 {
     unique_lock<mutex> lock(mMutexFeatures);
@@ -350,7 +320,7 @@ float MapPoint::GetFoundRatio()
 }
 
 /**
- * @brief 计算具有代表的描述子
+ * BRIEF 计算具有代表的描述子
  *
  * 由于一个MapPoint会被许多相机观测到，因此在插入关键帧后，需要判断是否更新当前点的最适合的描述子 \n
  * 先获得当前点的所有描述子，然后计算描述子之间的两两距离，最好的描述子与其他描述子应该具有最小的距离中值
@@ -363,7 +333,6 @@ void MapPoint::ComputeDistinctiveDescriptors()
 
     map<KeyFrame*,size_t> observations;
 
-    //获取所有观测
     {
         unique_lock<mutex> lock1(mMutexFeatures);
         if(mbBad)
@@ -397,7 +366,6 @@ void MapPoint::ComputeDistinctiveDescriptors()
 	Distances.resize(N, vector<float>(N, 0));
 	for (size_t i = 0; i<N; i++)
     {
-        //和自己的距离当然是0
         Distances[i][i]=0;
         for(size_t j=i+1;j<N;j++)
         {
@@ -438,14 +406,12 @@ void MapPoint::ComputeDistinctiveDescriptors()
     }
 }
 
-//获取当前地图点的描述子
 cv::Mat MapPoint::GetDescriptor()
 {
     unique_lock<mutex> lock(mMutexFeatures);
     return mDescriptor.clone();
 }
 
-//获取当前地图点在某个关键帧的观测中，对应的特征点的ID
 int MapPoint::GetIndexInKeyFrame(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutexFeatures);
@@ -467,11 +433,9 @@ bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
 }
 
 /**
- * @brief 更新平均观测方向以及观测距离范围
+ * BRIEF 更新平均观测方向以及观测距离范围
  *
  * 由于一个MapPoint会被许多相机观测到，因此在插入关键帧后，需要更新相应变量
- * 创建新的关键帧的时候会调用
- * 
  * @see III - C2.2 c2.4
  */
 void MapPoint::UpdateNormalAndDepth()
@@ -493,7 +457,6 @@ void MapPoint::UpdateNormalAndDepth()
     if(observations.empty())
         return;
 
-    //初始值为0向量用于累加;但是放心每次累加的变量都是经过归一化之后的
     cv::Mat normal = cv::Mat::zeros(3,1,CV_32F);
     int n=0;
     for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
@@ -543,16 +506,12 @@ float MapPoint::GetMaxDistanceInvariance()
 // m = ceil(------------)
 //            log(1.2)
 // 这里吴博师兄的PPT中貌似有讲
-// 这个函数的作用:
-// 在进行投影匹配的时候会给定特征点的搜索范围,考虑到处于不同尺度(也就是距离相机远近,位于图像金字塔中不同图层)的特征点受到相机旋转的影响不同,
-// 因此会希望距离相机近的点的搜索范围更大一点,距离相机更远的点的搜索范围更小一点,所以要在这里,根据点到关键帧/帧的距离来估计它在当前的关键帧/帧中,
-// 会大概处于哪个尺度
 int MapPoint::PredictScale(const float &currentDist, KeyFrame* pKF)
 {
     float ratio;
     {
         unique_lock<mutex> lock(mMutexPos);
-        // mfMaxDistance = ref_dist*levelScaleFactor 为参考帧考虑上尺度后的距离
+        // mfMaxDistance = ref_dist*levelScaleFactor为参考帧考虑上尺度后的距离
         // ratio = mfMaxDistance/currentDist = ref_dist/cur_dist
         ratio = mfMaxDistance/currentDist;
     }
