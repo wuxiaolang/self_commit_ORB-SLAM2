@@ -97,7 +97,7 @@ cv::Mat FrameDrawer::DrawFrame()
     if(im.channels()<3) //this should be always true
         cvtColor(im,im,CV_GRAY2BGR);
 
-    //Draw
+    // Draw
     // step 2：绘制初始化轨迹连线，绘制特征点边框（特征点用小框圈住）
     // step 2.1：初始化时，当前帧的特征坐标与初始帧的特征点坐标连成线，形成轨迹
     if(state==Tracking::NOT_INITIALIZED) //INITIALIZING

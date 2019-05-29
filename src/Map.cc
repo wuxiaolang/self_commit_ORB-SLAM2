@@ -59,7 +59,7 @@ void Map::AddKeyFrame(KeyFrame *pKF)
  * @brief Insert MapPoint in the map
  * @param pMP MapPoint
  */
-//向地图中插入地图点
+// BRIEF 向地图中插入地图点
 void Map::AddMapPoint(MapPoint *pMP)
 {
     unique_lock<mutex> lock(mMutexMap);
@@ -122,7 +122,7 @@ int Map::GetLastBigChangeIdx()
     return mnBigChangeIdx;
 }
 
-//获取地图中的所有关键帧
+// 获取地图中的所有关键帧
 vector<KeyFrame*> Map::GetAllKeyFrames()
 {
     unique_lock<mutex> lock(mMutexMap);

@@ -1572,7 +1572,7 @@ bool Tracking::NeedNewKeyFrame()
     // 很长时间没有插入关键帧
     const bool c1a = mCurrentFrame.mnId>=mnLastKeyFrameId+mMaxFrames;
     // Condition 1b: More than "MinFrames" have passed and Local Mapping is idle
-    // localMapper处于空闲状态,才有生成关键帧的基本条件
+    // localMapper 处于空闲状态,才有生成关键帧的基本条件
     const bool c1b = (mCurrentFrame.mnId>=mnLastKeyFrameId+mMinFrames && bLocalMappingIdle);
     // Condition 1c: tracking is weak
     // 跟踪要跪的节奏，0.25和0.3是一个比较低的阈值
@@ -1621,13 +1621,13 @@ bool Tracking::NeedNewKeyFrame()
 }
 
 /**
- * @brief 创建新的关键帧
+ * BRIEF 创建新的关键帧
  *
  * 对于非单目的情况，同时创建新的MapPoints
  */
 void Tracking::CreateNewKeyFrame()
 {
-    //如果不能保持局部建图器开启的状态,就无法顺利插入关键帧
+    // 如果不能保持局部建图器开启的状态,就无法顺利插入关键帧
     if(!mpLocalMapper->SetNotStop(true))
         return;
 
@@ -1728,11 +1728,11 @@ void Tracking::CreateNewKeyFrame()
     //当前帧成为新的关键帧
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;
-}
+} // 创建新的关键帧.
 
 
 /**
- * @brief 对 Local MapPoints 进行跟踪
+ * BRIEF 对 Local MapPoints 进行跟踪
  * 
  * 在局部地图中查找在当前帧视野范围内的点，将视野范围内的点和当前帧的特征点进行投影匹配
  */
@@ -1806,10 +1806,10 @@ void Tracking::SearchLocalPoints()
         // step 2.2：对视野范围内的MapPoints通过投影进行特征点匹配
         matcher.SearchByProjection(mCurrentFrame,mvpLocalMapPoints,th);
     }
-}
+} // 对 Local MapPoints 进行跟踪.
 
 /**
- * @brief 更新LocalMap
+ * BRIEF 更新LocalMap
  *
  * 局部地图包括： \n
  * - K1个关键帧、K2个临近关键帧和参考关键帧
@@ -1827,10 +1827,8 @@ void Tracking::UpdateLocalMap()
     UpdateLocalPoints();
 }
 
-
-
-/*
- * @brief 更新局部关键点，called by UpdateLocalMap()
+/**
+ * BRIEF 更新局部关键点，called by UpdateLocalMap()
  * 
  * 局部关键帧mvpLocalKeyFrames的MapPoints，更新mvpLocalMapPoints
  * \n 我觉得就是先把局部地图清空，然后将局部关键帧的地图点添加到局部地图中
@@ -1868,7 +1866,7 @@ void Tracking::UpdateLocalPoints()
 }
 
 /**
- * @brief 更新局部关键帧，called by UpdateLocalMap()
+ * BRIEF 更新局部关键帧，called by UpdateLocalMap()
  *
  * 遍历当前帧的MapPoints，将观测到这些MapPoints的关键帧和相邻的关键帧取出，更新 mvpLocalKeyFrames
  * //?怎么定义"相邻关键帧?" -- 从程序中来看指的就是他们的具有较好的共视关键帧,以及其父关键帧和子关键帧
@@ -2057,7 +2055,7 @@ bool Tracking::Relocalization()
             }
             else
             {
-                // 初始化PnPsolver
+                // 初始化 PnPsolver
                 PnPsolver* pSolver = new PnPsolver(mCurrentFrame,vvpMapPointMatches[i]);
                 pSolver->SetRansacParameters(
                     0.99,   //? 概率

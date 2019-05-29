@@ -41,24 +41,34 @@ namespace ORB_SLAM2
 {
 
 //查看器的构造函数
-Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath):
-    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking),
-    mbFinishRequested(false), mbFinished(true), mbStopped(false), mbStopRequested(false)
+Viewer::Viewer( System* pSystem, 
+                FrameDrawer *pFrameDrawer, 
+                MapDrawer *pMapDrawer, 
+                Tracking *pTracking, 
+                const string &strSettingPath):
+                    mpSystem(pSystem), 
+                    mpFrameDrawer(pFrameDrawer),
+                    mpMapDrawer(pMapDrawer), 
+                    mpTracker(pTracking),
+                    mbFinishRequested(false), 
+                    mbFinished(true), 
+                    mbStopped(false), 
+                    mbStopRequested(false)
 {
-    //从文件中读取相机的帧频
+    // 从文件中读取相机的帧频
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
 
     float fps = fSettings["Camera.fps"];
     if(fps<1)
         fps=30;
-    //计算出每一帧所持续的时间
+    // 计算出每一帧所持续的时间
     mT = 1e3/fps;
 
-    //从配置文件中获取图像的长宽参数
+    // 从配置文件中获取图像的长宽参数
     mImageWidth = fSettings["Camera.width"];
     mImageHeight = fSettings["Camera.height"];
     if(mImageWidth<1 || mImageHeight<1)
-    {   
+    {
         //默认值
         mImageWidth = 640;
         mImageHeight = 480;
@@ -72,10 +82,10 @@ Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer
 }
 
 // pangolin库的文档：http://docs.ros.org/fuerte/api/pangolin_wrapper/html/namespacepangolin.html
-//查看器的主进程看来是外部函数所调用的
+// 查看器的主进程看来是外部函数所调用的
 void Viewer::Run()
 {
-    //这个变量配合SetFinish函数用于指示该函数是否执行完毕
+    // 这个变量配合SetFinish函数用于指示该函数是否执行完毕
     mbFinished = false;
 
     pangolin::CreateWindowAndBind("ORB-SLAM2: Map Viewer",1024,768);
@@ -110,7 +120,7 @@ void Viewer::Run()
                 );
 
     // Add named OpenGL viewport to window and provide 3D Handler
-    // 定义显示面板大小，orbslam中有左右两个面板，昨天显示一些按钮，右边显示图形
+    // 定义显示面板大小，orbslam中有左右两个面板，左边显示一些按钮，右边显示图形
     // 前两个参数（0.0, 1.0）表明宽度和面板纵向宽度和窗口大小相同
     // 中间两个参数（pangolin::Attach::Pix(175), 1.0）表明右边所有部分用于显示图形
     // 最后一个参数（-1024.0f/768.0f）为显示长宽比
@@ -129,7 +139,7 @@ void Viewer::Run()
     bool bFollow = true;
     bool bLocalizationMode = false;
 
-    //更新绘制的内容
+    // 更新绘制的内容
     while(1)
     {
         // 清除缓冲区中的当前可写的颜色缓冲 和 深度缓冲
@@ -139,15 +149,15 @@ void Viewer::Run()
         mpMapDrawer->GetCurrentOpenGLCameraMatrix(Twc);
 
         // step2：根据相机的位姿调整视角
-        // menuFollowCamera为按钮的状态，bFollow为真实的状态
+        // menuFollowCamera 为按钮的状态，bFollow 为真实的状态
         if(menuFollowCamera && bFollow)
         {
-            //当之前也在跟踪相机时
+            // 当之前也在跟踪相机时
             s_cam.Follow(Twc);
         }
         else if(menuFollowCamera && !bFollow)
         {
-            //当之前没有在跟踪相机时
+            // 当之前没有在跟踪相机时
             s_cam.SetModelViewMatrix(
                 pangolin::ModelViewLookAt(mViewpointX,mViewpointY,mViewpointZ, 0,0,0,0.0,-1.0, 0.0));   //? 不知道这个视角设置的具体作用和
             s_cam.Follow(Twc);
@@ -155,11 +165,11 @@ void Viewer::Run()
         }
         else if(!menuFollowCamera && bFollow)
         {
-            //之前跟踪相机,但是现在菜单命令不要跟踪相机时
+            // 之前跟踪相机,但是现在菜单命令不要跟踪相机时
             bFollow = false;
         }
 
-        //更新定位模式或者是SLAM模式
+        // STEP 更新定位模式或者是SLAM模式
         if(menuLocalizationMode && !bLocalizationMode)
         {
             mpSystem->ActivateLocalizationMode();
@@ -175,12 +185,12 @@ void Viewer::Run()
         // step 3：绘制地图和图像(3D部分)
         // 设置为白色，glClearColor(red, green, blue, alpha），数值范围(0, 1)
         glClearColor(1.0f,1.0f,1.0f,1.0f);
-        //绘制当前相机
+        // 绘制当前相机
         mpMapDrawer->DrawCurrentCamera(Twc);
-        //绘制关键帧和共视图
+        // 绘制关键帧和共视图
         if(menuShowKeyFrames || menuShowGraph)
             mpMapDrawer->DrawKeyFrames(menuShowKeyFrames,menuShowGraph);
-        //绘制地图点
+        // 绘制地图点
         if(menuShowPoints)
             mpMapDrawer->DrawMapPoints();
 
@@ -225,12 +235,12 @@ void Viewer::Run()
             }
         }
 
-        //满足的时候退出这个线程循环,这里应该是查看终止请求
+        // 满足的时候退出这个线程循环,这里应该是查看终止请求
         if(CheckFinish())
             break;
     }
 
-    //终止查看器,主要是设置状态,执行完成退出这个函数后,查看器进程就已经被销毁了
+    // 终止查看器,主要是设置状态,执行完成退出这个函数后,查看器进程就已经被销毁了
     SetFinish();
 }
 

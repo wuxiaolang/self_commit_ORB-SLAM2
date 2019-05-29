@@ -263,6 +263,7 @@ int KeyFrame::GetWeight(KeyFrame *pKF)
 }
 
 /**
+ * BRIEF 关键帧关联地图点.
  * @brief Add MapPoint to KeyFrame
  * @param pMP MapPoint
  * @param idx MapPoint在KeyFrame中的索引

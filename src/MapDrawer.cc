@@ -54,12 +54,13 @@ MapDrawer::MapDrawer(Map* pMap, const string &strSettingPath):mpMap(pMap)
 
 }
 
+// BRIEF 绘制地图点.
 //关于gl相关的函数，可直接google, 并加上msdn关键词 - 大佬牛逼!
 void MapDrawer::DrawMapPoints()
 {
-    //取出所有的地图点
+    // 取出所有的地图点
     const vector<MapPoint*> &vpMPs = mpMap->GetAllMapPoints();
-    //取出mvpReferenceMapPoints，也即局部地图d点
+    // 取出mvpReferenceMapPoints，也即局部地图d点
     const vector<MapPoint*> &vpRefMPs = mpMap->GetReferenceMapPoints();
 
     //将vpRefMPs从vector容器类型转化为set容器类型，便于使用set::count快速统计 - 我觉得称之为"重新构造"可能更加合适一些
@@ -70,7 +71,7 @@ void MapDrawer::DrawMapPoints()
         return;
 
     // for AllMapPoints
-    //显示所有的地图点（不包括局部地图点），大小为2个像素，黑色
+    // 显示所有的地图点（不包括局部地图点），大小为2个像素，黑色
     glPointSize(mPointSize);
     glBegin(GL_POINTS);
     glColor3f(0.0,0.0,0.0);         //黑色
@@ -86,7 +87,7 @@ void MapDrawer::DrawMapPoints()
     glEnd();
 
     // for ReferenceMapPoints
-    //显示局部地图点，大小为2个像素，红色
+    // 显示局部地图点，大小为2个像素，红色
     glPointSize(mPointSize);
     glBegin(GL_POINTS);
     glColor3f(1.0,0.0,0.0);
@@ -100,8 +101,9 @@ void MapDrawer::DrawMapPoints()
 
     }
     glEnd();
-}
+} // 绘制地图点.
 
+// BRIEF 绘制关键帧和共视关系.
 //关于gl相关的函数，可直接google, 并加上msdn关键词
 void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
 {
@@ -226,9 +228,10 @@ void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
 
         glEnd();
     }
-}
+} // 绘制关键帧和共视关系.
 
-//关于gl相关的函数，可直接google, 并加上msdn关键词
+// BRIEF 根据相机位姿在界面中绘制相机框.
+// 关于gl相关的函数，可直接google, 并加上msdn关键词
 void MapDrawer::DrawCurrentCamera(pangolin::OpenGlMatrix &Twc)
 {
     //相机模型大小：宽度占总宽度比例为0.08
@@ -280,14 +283,14 @@ void MapDrawer::DrawCurrentCamera(pangolin::OpenGlMatrix &Twc)
     glPopMatrix();
 }
 
-//设置当前帧相机的位姿, 设置这个函数是因为要处理多线程的操作
+// 设置当前帧相机的位姿, 设置这个函数是因为要处理多线程的操作
 void MapDrawer::SetCurrentCameraPose(const cv::Mat &Tcw)
 {
     unique_lock<mutex> lock(mMutexCamera);
     mCameraPose = Tcw.clone();
 }
 
-// 将相机位姿mCameraPose由Mat类型转化为OpenGlMatrix类型
+// BRIEF 获取相机位姿，并将相机位姿mCameraPose由Mat类型转化为OpenGlMatrix类型
 void MapDrawer::GetCurrentOpenGLCameraMatrix(pangolin::OpenGlMatrix &M)
 {
     if(!mCameraPose.empty())

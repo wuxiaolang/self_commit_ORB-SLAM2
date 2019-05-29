@@ -880,12 +880,13 @@ bool Frame::PosInGrid(			//返回值：true-说明找到了指定特征点所在
 // 计算词包 mBowVec 和 mFeatVec
 void Frame::ComputeBoW()
 {
-    /** 这个函数只有在当前帧的词袋是空的时候才回进行操作。步骤如下:<ul> */
+    // 这个函数只有在当前帧的词袋是空的时候才回进行操作
     if(mBowVec.empty())
     {
-		/** STEP  1.要写入词袋信息,将以OpenCV格式存储的描述子 Frame::mDescriptors 转换成为vector<cv::Mat>存储</li> */
+		// STEP 1.要写入词袋信息,将以OpenCV格式存储的描述子 Frame::mDescriptors 转换成为vector<cv::Mat>存储
         vector<cv::Mat> vCurrentDesc = Converter::toDescriptorVector(mDescriptors);
-		/** STEP  2. 将特征点的描述子转换成为当前帧的词袋 </li> */
+
+		// STEP 2. 将特征点的描述子转换成为当前帧的词袋
         mpORBvocabulary->transform(vCurrentDesc,	//当前的描述子vector
 								   mBowVec,			//输出，词袋向量
 								   mFeatVec,		//输出，保存有特征点索引的特征 vector

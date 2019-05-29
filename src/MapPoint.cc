@@ -141,7 +141,7 @@ KeyFrame* MapPoint::GetReferenceKeyFrame()
 }
 
 /**
- * @brief 添加观测
+ * BRIEF 地图点关联关键帧.
  *
  * 记录哪些KeyFrame的那个特征点能观测到该MapPoint \n
  * 并增加观测的相机数目nObs，单目+1，双目或者grbd+2
