@@ -767,7 +767,7 @@ int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
 }
 
 /**
- * @brief 利用基本矩阵F12，在两个关键帧之间未匹配的特征点中产生新的3d点
+ * BRIEF 利用基本矩阵F12，在两个关键帧之间未匹配的特征点中产生新的3d点
  * 
  * @param pKF1          关键帧1
  * @param pKF2          关键帧2
@@ -975,7 +975,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
 }
 
 /**
- * @brief 将MapPoints投影到关键帧pKF中，并判断是否有重复的MapPoints
+ * BRIEF 将MapPoints投影到关键帧pKF中，并判断是否有重复的MapPoints
  * 1.如果MapPoint能匹配关键帧的特征点，并且该点有对应的MapPoint，那么将两个MapPoint合并（选择观测数多的）
  * 2.如果MapPoint能匹配关键帧的特征点，并且该点没有对应的MapPoint，那么为该点添加MapPoint
  * @param  pKF         相邻关键帧

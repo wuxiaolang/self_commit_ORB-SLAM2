@@ -60,7 +60,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
 /**
  * @brief Bag of Words Representation
  *
- * 计算mBowVec，并且将描述子分散在第4层上，即mFeatVec记录了属于第i个node的ni个描述子
+ * BRIEF 计算mBowVec，并且将描述子分散在第4层上，即mFeatVec记录了属于第i个node的ni个描述子
  * @see ProcessNewKeyFrame()
  */
 void KeyFrame::ComputeBoW()
@@ -132,7 +132,7 @@ cv::Mat KeyFrame::GetTranslation()
 }
 
 /**
- * @brief 为关键帧之间添加连接
+ * BRIEF 为关键帧之间添加连接
  * 
  * 更新了mConnectedKeyFrameWeights
  * @param pKF    关键帧
@@ -198,7 +198,7 @@ set<KeyFrame*> KeyFrame::GetConnectedKeyFrames()
 }
 
 /**
- * @brief 得到与该关键帧连接的关键帧(已按权值排序)
+ * BRIEF 得到与该关键帧连接的关键帧(已按权值排序)
  * @return 连接的关键帧
  */
 vector<KeyFrame*> KeyFrame::GetVectorCovisibleKeyFrames()
@@ -208,7 +208,7 @@ vector<KeyFrame*> KeyFrame::GetVectorCovisibleKeyFrames()
 }
 
 /**
- * @brief 得到与该关键帧连接的前N个关键帧(已按权值排序)
+ * BRIEF 得到与该关键帧连接的前N个关键帧(已按权值排序)
  * 
  * NOTICE 如果连接的关键帧少于N，则返回所有连接的关键帧
  * @param N 前N个
@@ -482,7 +482,7 @@ void KeyFrame::UpdateConnections()
             mbFirstConnection = false;
         }
     }
-}
+} // 更新图的连接.
 
 void KeyFrame::AddChild(KeyFrame *pKF)
 {
@@ -776,7 +776,7 @@ cv::Mat KeyFrame::UnprojectStereo(int i)
 } // UnprojectStereo() 反投影得到 3D 坐标.
 
 /**
- * @brief 评估当前关键帧场景深度，q=2表示中值
+ * BRIEF 评估当前关键帧场景深度，q=2表示中值
  * @param q q=2
  * @return Median Depth
  */

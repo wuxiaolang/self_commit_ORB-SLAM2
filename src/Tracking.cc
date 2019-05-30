@@ -1719,7 +1719,7 @@ void Tracking::CreateNewKeyFrame()
         }
     }
 
-    //执行插入关键帧的操作,其实也是在列表中等待
+    // STEP 执行插入关键帧的操作,其实也是在列表中等待
     mpLocalMapper->InsertKeyFrame(pKF);
 
     //然后现在允许局部建图器停止了

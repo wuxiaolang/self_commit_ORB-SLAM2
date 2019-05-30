@@ -514,7 +514,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
 } // 位姿优化.
 
 /**
- * @brief Local Bundle Adjustment
+ * BRIEF Local Bundle Adjustment
  *
  * 1. Vertex:
  *     - g2o::VertexSE3Expmap()，LocalKeyFrames，即当前关键帧的位姿、与当前关键帧相连的关键帧的位姿
@@ -883,7 +883,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         pMP->SetWorldPos(Converter::toCvMat(vPoint->estimate()));
         pMP->UpdateNormalAndDepth();
     }
-}
+} // 局部 BA 优化.
 
 /**
  * @brief 闭环检测后，EssentialGraph优化

@@ -1,21 +1,5 @@
 /**
 * This file is part of ORB-SLAM2.
-*
-* Copyright (C) 2014-2016 Raúl Mur-Artal <raulmur at unizar dot es> (University of Zaragoza)
-* For more information see <https://github.com/raulmur/ORB_SLAM2>
-*
-* ORB-SLAM2 is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* ORB-SLAM2 is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "LoopClosing.h"
@@ -63,7 +47,7 @@ void LoopClosing::Run()
         // Check if there are keyframes in the queue
         // Loopclosing中的关键帧是LocalMapping发送过来的，LocalMapping是Tracking中发过来的
         // 在LocalMapping中通过InsertKeyFrame将关键帧插入闭环检测队列mlpLoopKeyFrameQueue
-        // 闭环检测队列mlpLoopKeyFrameQueue中的关键帧不为空
+        // STEP 闭环检测队列mlpLoopKeyFrameQueue中的关键帧不为空
         if(CheckNewKeyFrames())
         {
             // Detect loop candidates and check covisibility consistency
@@ -109,10 +93,11 @@ bool LoopClosing::CheckNewKeyFrames()
     return(!mlpLoopKeyFrameQueue.empty());
 }
 
+// BRIEF 进行闭环检测.
 bool LoopClosing::DetectLoop()
 {
     {
-        // 从队列中取出一个关键帧
+        // STEP 从队列中取出一个关键帧
         unique_lock<mutex> lock(mMutexLoopQueue);
         mpCurrentKF = mlpLoopKeyFrameQueue.front();
         mlpLoopKeyFrameQueue.pop_front();
@@ -121,11 +106,11 @@ bool LoopClosing::DetectLoop()
     }
 
     //If the map contains less than 10 KF or less than 10 KF have passed from last loop detection
-    // 步骤1：如果距离上次闭环没多久（小于10帧），或者map中关键帧总共还没有10帧，则不进行闭环检测
+    // STEP 步骤1：如果距离上次闭环没多久（小于10帧），或者map中关键帧总共还没有10帧，则不进行闭环检测
     if(mpCurrentKF->mnId<mLastLoopKFid+10)
     {
         mpKeyFrameDB->add(mpCurrentKF);
-        mpCurrentKF->SetErase();
+        mpCurrentKF->SetErase();            // 处理结束，可以移除了.
         return false;
     }
 
@@ -133,7 +118,7 @@ bool LoopClosing::DetectLoop()
     // This is the lowest score to a connected keyframe in the covisibility graph
     // We will impose loop candidates to have a higher similarity than this
     // VIII-A
-    // 步骤2：遍历所有共视关键帧，计算当前关键帧与每个共视关键的bow相似度得分，并得到最低得分minScore
+    // STEP 步骤2：遍历所有共视关键帧，计算当前关键帧与每个共视关键的bow相似度得分，并得到最低得分minScore
     const vector<KeyFrame*> vpConnectedKeyFrames = mpCurrentKF->GetVectorCovisibleKeyFrames();
     const DBoW2::BowVector &CurrentBowVec = mpCurrentKF->mBowVec;
     float minScore = 1;
@@ -151,7 +136,7 @@ bool LoopClosing::DetectLoop()
     }
 
     // Query the database imposing the minimum score
-    // 步骤3：在所有关键帧中找出闭环备选帧
+    // STEP 步骤3：在所有关键帧中找出闭环备选帧
     vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectLoopCandidates(mpCurrentKF, minScore);
 
     // If there are no loop candidates, just add new keyframe and return false
@@ -167,7 +152,7 @@ bool LoopClosing::DetectLoop()
     // Each candidate expands a covisibility group (keyframes connected to the loop candidate in the covisibility graph)
     // A group is consistent with a previous group if they share at least a keyframe
     // We must detect a consistent loop in several consecutive keyframes to accept it
-    // 步骤4：在候选帧中检测具有连续性的候选帧
+    // STEP 步骤4：在候选帧中检测具有连续性的候选帧
     // 1、每个候选帧将与自己相连的关键帧构成一个“子候选组spCandidateGroup”，vpCandidateKFs-->spCandidateGroup
     // 2、检测“子候选组”中每一个关键帧是否存在于“连续组”，如果存在nCurrentConsistency++，则将该“子候选组”放入“当前连续组vCurrentConsistentGroups”
     // 3、如果nCurrentConsistency大于等于3，那么该”子候选组“代表的候选帧过关，进入mvpEnoughConsistentCandidates
@@ -258,10 +243,10 @@ bool LoopClosing::DetectLoop()
 
     mpCurrentKF->SetErase();
     return false;
-}
+} // 闭环检测.
 
 /**
- * @brief 计算当前帧与闭环帧的Sim3变换等
+ * BRIEF 计算当前帧与闭环帧的Sim3变换等
  *
  * 1. 通过Bow加速描述子的匹配，利用RANSAC粗略地计算出当前帧与闭环帧的Sim3（当前帧---闭环帧）
  * 2. 根据估计的Sim3，对3D点进行投影找到更多匹配，通过优化的方法计算更精确的Sim3（当前帧---闭环帧）
@@ -484,7 +469,7 @@ bool LoopClosing::ComputeSim3()
 }
 
 /**
- * @brief 闭环
+ * BRIEF 闭环矫正.
  *
  * 1. 通过求解的Sim3以及相对姿态关系，调整与当前帧相连的关键帧位姿以及这些关键帧观测到的MapPoints的位置（相连关键帧---当前帧）
  * 2. 将闭环帧以及闭环帧相连的关键帧的MapPoints和与当前帧相连的关键帧的点进行匹配（相连关键帧+当前帧---闭环帧+相连关键帧）
@@ -709,7 +694,7 @@ void LoopClosing::CorrectLoop()
     cout << "Loop Closed!" << endl;
 
     mLastLoopKFid = mpCurrentKF->mnId;
-}
+} // 闭环矫正.
 
 // 通过将闭环时相连关键帧的MapPoints投影到这些关键帧中，进行MapPoints检查与替换
 void LoopClosing::SearchAndFuse(const KeyFrameAndPose &CorrectedPosesMap)
