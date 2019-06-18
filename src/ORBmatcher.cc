@@ -350,7 +350,7 @@ int ORBmatcher::SearchByBoW(KeyFrame* pKF,
     return nmatches;
 } // 通过词袋，对关键帧的特征点进行跟踪.
 
-// 根据Sim3变换，将每个vpPoints投影到pKF上，并根据尺度确定一个搜索区域，
+// BRIEF 根据Sim3变换，将每个vpPoints投影到pKF上，并根据尺度确定一个搜索区域，
 // 根据该MapPoint的描述子与该区域内的特征点进行匹配，如果匹配误差小于TH_LOW即匹配成功，更新vpMatched
 int ORBmatcher::SearchByProjection(KeyFrame* pKF, cv::Mat Scw, const vector<MapPoint*> &vpPoints, vector<MapPoint*> &vpMatched, int th)
 {
@@ -478,11 +478,11 @@ int ORBmatcher::SearchByProjection(KeyFrame* pKF, cv::Mat Scw, const vector<MapP
 // 根据可能匹配特征点的描述子计算距离，确定最佳匹配，
 // 另外如果考虑特征点的方向，则将第一帧中的特征的方向角度减去对应第二帧的特征的方向角度，
 // 将值划分为直方图，则会在0度和360度左右对应的组距比较大，这样就可以对其它相差太大的角度可以进行剔除
-int ORBmatcher::SearchForInitialization(Frame &F1, 
-                                        Frame &F2, 
-                                        vector<cv::Point2f> &vbPrevMatched, 
-                                        vector<int> &vnMatches12, 
-                                        int windowSize)
+int ORBmatcher::SearchForInitialization(Frame &F1,          // 参考帧.
+                                        Frame &F2,          // 当前帧.
+                                        vector<cv::Point2f> &vbPrevMatched, // 存储匹配点.
+                                        vector<int> &vnMatches12,           // 匹配标志位.
+                                        int windowSize)     // 搜索窗口大小.
 {
     int nmatches=0;
     vnMatches12 = vector<int>(F1.mvKeysUn.size(),-1);
@@ -497,6 +497,7 @@ int ORBmatcher::SearchForInitialization(Frame &F1,
     vector<int> vMatchedDistance(F2.mvKeysUn.size(),INT_MAX);
     vector<int> vnMatches21(F2.mvKeysUn.size(),-1);
 
+    // 遍历参考帧的特征点.
     for(size_t i1=0, iend1=F1.mvKeysUn.size(); i1<iend1; i1++)
     {
         cv::KeyPoint kp1 = F1.mvKeysUn[i1];
@@ -505,8 +506,12 @@ int ORBmatcher::SearchForInitialization(Frame &F1,
         if(level1>0)
             continue;
 
-        // 在当前帧中查找可能匹配的特征的索引.
-        vector<size_t> vIndices2 = F2.GetFeaturesInArea(vbPrevMatched[i1].x,vbPrevMatched[i1].y, windowSize,level1,level1);
+        // STEP 在当前帧中查找可能匹配的特征的索引，保存在 vIndices2 中.
+        vector<size_t> vIndices2 = F2.GetFeaturesInArea(vbPrevMatched[i1].x,
+                                                        vbPrevMatched[i1].y, 
+                                                        windowSize,
+                                                        level1,
+                                                        level1);
 
         if(vIndices2.empty())
             continue;
@@ -517,7 +522,7 @@ int ORBmatcher::SearchForInitialization(Frame &F1,
         int bestDist2 = INT_MAX;
         int bestIdx2 = -1;
 
-        // 对当前帧中可能的特征点进行遍历.
+        // STEP 遍历筛选出的特征点，计算与参考帧的特征点之间描述子的距离，保存最小的两个距离.
         for(vector<size_t>::iterator vit=vIndices2.begin(); vit!=vIndices2.end(); vit++)
         {
             size_t i2 = *vit;
@@ -530,7 +535,7 @@ int ORBmatcher::SearchForInitialization(Frame &F1,
             if(vMatchedDistance[i2]<=dist)
                 continue;
 
-            // 找到最小的前两个距离.
+            // 找到最小的前两个距离，计算距离比.
             if(dist<bestDist)
             {
                 bestDist2=bestDist;
@@ -543,12 +548,12 @@ int ORBmatcher::SearchForInitialization(Frame &F1,
             }
         }
 
-        // 确保最小距离小于阈值.
+        // STEP 比例阈值进行筛选.
         // 详见SearchByBoW(KeyFrame* pKF,Frame &F, vector<MapPoint*> &vpMapPointMatches)函数步骤4
-        if(bestDist<=TH_LOW)
+        if(bestDist <= TH_LOW)
         {
             // 再确保此最小距离乘以nn_ratio_要大于最小距离，主要确保该匹配比较鲁棒.
-            if(bestDist<(float)bestDist2*mfNNratio)
+            if(bestDist < (float)bestDist2*mfNNratio)
             {
                 // 如果已经匹配，则说明当前特征已经有过对应，则就会有两个对应，移除该匹配.
                 if(vnMatches21[bestIdx2]>=0)
@@ -556,38 +561,42 @@ int ORBmatcher::SearchForInitialization(Frame &F1,
                     vnMatches12[vnMatches21[bestIdx2]]=-1;
                     nmatches--;
                 }
-                // 记录匹配.
+                // 记录匹配标志.
                 vnMatches12[i1]=bestIdx2;
                 vnMatches21[bestIdx2]=i1;
                 vMatchedDistance[bestIdx2]=bestDist;
                 nmatches++;
 
+                // STEP 角度投票（旋转一致性）进行剔除误匹配.
                 if(mbCheckOrientation)
                 {
-                    float rot = F1.mvKeysUn[i1].angle-F2.mvKeysUn[bestIdx2].angle;
-                    if(rot<0.0)
+                    // 该匹配的特征点对的角度变化值 [0, 360).
+                    float rot = F1.mvKeysUn[i1].angle - F2.mvKeysUn[bestIdx2].angle;    
+                    if(rot < 0.0)       // 转化为正值.
                         rot+=360.0f;
-                    int bin = round(rot*factor);
-                    if(bin==HISTO_LENGTH)
-                        bin=0;
+
+                    int bin = round(rot*factor);    // 将rot分配到bin组.
+                    if(bin == HISTO_LENGTH)
+                        bin = 0;
                     assert(bin>=0 && bin<HISTO_LENGTH);
                     // 得到直方图.
                     rotHist[bin].push_back(i1);
                 }
             }
         }
+    } // 遍历参考帧特征点.
 
-    }
-
+    // STEP 角度投票（旋转一致性）进行剔除误匹配.
     if(mbCheckOrientation)
     {
         int ind1=-1;
         int ind2=-1;
         int ind3=-1;
 
-        ComputeThreeMaxima(rotHist,HISTO_LENGTH,ind1,ind2,ind3);
+        // NOTE 取出直方图 rotHist 中最大的三个索引 ind1, ind2, ind3.
+        ComputeThreeMaxima(rotHist, HISTO_LENGTH, ind1, ind2, ind3);
 
-        for(int i=0; i<HISTO_LENGTH; i++)
+        for(int i = 0; i < HISTO_LENGTH; i++)
         {
             // 对可能的一致的方向就不予考虑.
             if(i==ind1 || i==ind2 || i==ind3)
@@ -603,11 +612,10 @@ int ORBmatcher::SearchForInitialization(Frame &F1,
                 }
             }
         }
-
     }
 
     // Update prev matched
-    for(size_t i1=0, iend1=vnMatches12.size(); i1<iend1; i1++)
+    for(size_t i1 = 0, iend1 = vnMatches12.size(); i1 < iend1; i1++)
         if(vnMatches12[i1]>=0)
             vbPrevMatched[i1]=F2.mvKeysUn[vnMatches12[i1]].pt;
 
@@ -1272,7 +1280,7 @@ int ORBmatcher::Fuse(KeyFrame *pKF, cv::Mat Scw, const vector<MapPoint *> &vpPoi
     return nFused;
 }
 
-// 通过Sim3变换，确定pKF1的特征点在pKF2中的大致区域，同理，确定pKF2的特征点在pKF1中的大致区域
+// BRIEF 通过Sim3变换，确定pKF1的特征点在pKF2中的大致区域，同理，确定pKF2的特征点在pKF1中的大致区域
 // 在该区域内通过描述子进行匹配捕获pKF1和pKF2之前漏匹配的特征点，更新vpMatches12（之前使用SearchByBoW进行特征点匹配时会有漏匹配）
 int ORBmatcher::SearchBySim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint*> &vpMatches12,
                              const float &s12, const cv::Mat &R12, const cv::Mat &t12, const float th)
@@ -1816,7 +1824,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, KeyFrame *pKF, const set
     return nmatches;
 }
 
-// 取出直方图中值最大的三个index
+// BRIEF 取出直方图中值最大的三个index.
 void ORBmatcher::ComputeThreeMaxima(vector<int>* histo, const int L, int &ind1, int &ind2, int &ind3)
 {
     int max1=0;
@@ -1858,7 +1866,7 @@ void ORBmatcher::ComputeThreeMaxima(vector<int>* histo, const int L, int &ind1, 
     {
         ind3=-1;
     }
-}
+} // 取出直方图中值最大的三个index.
 
 // BRIEF 比较两帧的描述子.
 // Bit set count operation from
@@ -1879,6 +1887,6 @@ int ORBmatcher::DescriptorDistance(const cv::Mat &a, const cv::Mat &b)
     }
 
     return dist;
-}
+} // 比较两帧的描述子.
 
 } //namespace ORB_SLAM

@@ -1,21 +1,5 @@
 /**
 * This file is part of ORB-SLAM2.
-*
-* Copyright (C) 2014-2016 Raúl Mur-Artal <raulmur at unizar dot es> (University of Zaragoza)
-* For more information see <https://github.com/raulmur/ORB_SLAM2>
-*
-* ORB-SLAM2 is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* ORB-SLAM2 is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -33,9 +17,15 @@
 namespace ORB_SLAM2
 {
 
-
-Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<MapPoint *> &vpMatched12, const bool bFixScale):
-    mnIterations(0), mnBestInliers(0), mbFixScale(bFixScale)
+// BRIEF 构造 sim3 求解器.
+// 将上一步得到的匹配的mappoint对，表达成各自坐标系下的空间点，并变化为像平面下的坐标。
+Sim3Solver::Sim3Solver( KeyFrame *pKF1, 
+                        KeyFrame *pKF2, 
+                        const vector<MapPoint *> &vpMatched12, 
+                        const bool bFixScale):
+                            mnIterations(0), 
+                            mnBestInliers(0), 
+                            mbFixScale(bFixScale)
 {
     mpKF1 = pKF1;
     mpKF2 = pKF2;
@@ -115,7 +105,7 @@ Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<MapPoint *> 
     FromCameraToImage(mvX3Dc2,mvP2im2,mK2);
 
     SetRansacParameters();
-}
+} // 构造 sim3 求解器.
 
 void Sim3Solver::SetRansacParameters(double probability, int minInliers, int maxIterations)
 {
@@ -143,7 +133,7 @@ void Sim3Solver::SetRansacParameters(double probability, int minInliers, int max
     mnIterations = 0;
 }
 
-// Ransac求解mvX3Dc1和mvX3Dc2之间Sim3，函数返回mvX3Dc2到mvX3Dc1的Sim3变换
+// BRIEF Ransac求解mvX3Dc1和mvX3Dc2之间Sim3，函数返回mvX3Dc2到mvX3Dc1的Sim3变换
 cv::Mat Sim3Solver::iterate(int nIterations, bool &bNoMore, vector<bool> &vbInliers, int &nInliers)
 {
     bNoMore = false;
@@ -170,7 +160,7 @@ cv::Mat Sim3Solver::iterate(int nIterations, bool &bNoMore, vector<bool> &vbInli
         vAvailableIndices = mvAllIndices;
 
         // Get min set of points
-        // 步骤1：任意取三组点算Sim矩阵
+        // STEP 步骤1：任意取三组点算Sim矩阵
         for(short i = 0; i < 3; ++i)
         {
             int randi = DUtils::Random::RandomInt(0, vAvailableIndices.size()-1);
@@ -188,10 +178,10 @@ cv::Mat Sim3Solver::iterate(int nIterations, bool &bNoMore, vector<bool> &vbInli
             vAvailableIndices.pop_back();
         }
 
-        // 步骤2：根据两组匹配的3D点，计算之间的Sim3变换
+        // STEP 步骤2：根据两组匹配的3D点，计算之间的Sim3变换
         ComputeSim3(P3Dc1i,P3Dc2i);
 
-        // 步骤3：通过投影误差进行inlier检测
+        // STEP 步骤3：通过投影误差进行inlier检测
         CheckInliers();
 
         if(mnInliersi>=mnBestInliers)
@@ -218,7 +208,7 @@ cv::Mat Sim3Solver::iterate(int nIterations, bool &bNoMore, vector<bool> &vbInli
         bNoMore=true;
 
     return cv::Mat();
-}
+} // sim3 迭代求解.
 
 cv::Mat Sim3Solver::find(vector<bool> &vbInliers12, int &nInliers)
 {
@@ -238,7 +228,7 @@ void Sim3Solver::ComputeCentroid(cv::Mat &P, cv::Mat &Pr, cv::Mat &C)
     }
 }
 
-
+// BRIEF 求解 Sim3.
 void Sim3Solver::ComputeSim3(cv::Mat &P1, cv::Mat &P2)
 {
     // ！！！！！！！这段代码一定要看这篇论文！！！！！！！！！！！
@@ -358,7 +348,7 @@ void Sim3Solver::ComputeSim3(cv::Mat &P1, cv::Mat &P2)
     sRinv.copyTo(mT21i.rowRange(0,3).colRange(0,3));
     cv::Mat tinv = -sRinv*mt12i;
     tinv.copyTo(mT21i.rowRange(0,3).col(3));
-}
+} // 求解 Sim3.
 
 
 void Sim3Solver::CheckInliers()

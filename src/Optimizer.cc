@@ -886,7 +886,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 } // 局部 BA 优化.
 
 /**
- * @brief 闭环检测后，EssentialGraph优化
+ * BRIEF 闭环检测后，EssentialGraph优化
  *
  * 1. Vertex:
  *     - g2o::VertexSim3Expmap，Essential graph中关键帧的位姿
@@ -1201,7 +1201,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
 }
 
 /**
- * @brief 形成闭环时进行Sim3优化
+ * BRIEF 形成闭环时进行Sim3优化
  *
  * 1. Vertex:
  *     - g2o::VertexSim3Expmap()，两个关键帧的位姿
