@@ -931,7 +931,7 @@ void Tracking::MonocularInitialization()
         int nmatches = matcher.SearchForInitialization( mInitialFrame,mCurrentFrame, //初始化时的参考帧和当前帧
                                                         mvbPrevMatched,              //在初始化参考帧中提取得到的特征点
                                                         mvIniMatches,                //保存匹配关系
-                                                        100);                        //? 什么窗口大小
+                                                        100);                        //窗口大小
 
         // Check if there are enough correspondences
         // step 4：如果初始化的两帧之间的匹配点太少，重新初始化
@@ -993,8 +993,8 @@ void Tracking::MonocularInitialization()
 void Tracking::CreateInitialMapMonocular()
 {
     // STEP 1. Create KeyFrames 认为单目初始化时候的参考帧和当前帧都是关键帧
-    KeyFrame* pKFini = new KeyFrame(mInitialFrame,mpMap,mpKeyFrameDB);
-    KeyFrame* pKFcur = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+    KeyFrame* pKFini = new KeyFrame(mInitialFrame, mpMap, mpKeyFrameDB);
+    KeyFrame* pKFcur = new KeyFrame(mCurrentFrame, mpMap, mpKeyFrameDB);
 
     // step 2：将初始关键帧的描述子转为BoW
     pKFini->ComputeBoW();

@@ -147,7 +147,7 @@ private:
     float CheckFundamental(const cv::Mat &F21, vector<bool> &vbMatchesInliers, float sigma);
 
     /**
-     * @brief 从F恢复R t
+     * BRIEF 从F恢复R t
      * @details 度量重构
      * \n 1. 由Fundamental矩阵结合相机内参K，得到Essential矩阵: \f$ E = k'^T F k \f$
      * \n 2. SVD分解得到R t
